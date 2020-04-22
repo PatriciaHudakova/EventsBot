@@ -1,0 +1,3 @@
+#Ignored Files
+/src/.env
+.env
