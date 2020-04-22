@@ -9,34 +9,26 @@ import (
 
 //declare a struct called application
 type application struct {
-	client *tbot.Client
+	client *tbot.Client //(pointer) works with the actual value as opposed to a copy
 }
 
-//Handle "/start" command
-func (a *application) startHandler(request *tbot.Message) {
-	m := "Hello, I am your friendly EventsBot and I'll be helping you with keeping track of your " +
-		"events! What would you like to do?"
-	a.client.SendMessage(request.Chat.ID, m)
-}
-
-//assign variables to their types
 var (
 	app   application
 	bot   *tbot.Server
 	token string
 )
 
-//initialise environment before main() launch
+//initialise environment before main() launches
 func init() {
 	err := godotenv.Load() //assign and declare an error variable
-	if err != nil {        //if there is an error loading environment
+	if err != nil {        //if there is an error during env launch
 		log.Fatalln(err)
 	}
 	token = os.Getenv("TELEGRAM_TOKEN")
 }
 
 func main() {
-	bot = tbot.New(token)
+	bot = tbot.New(token) //an instance of correct bot is created (token being the differential)
 	app.client = bot.Client()
 	bot.HandleMessage("/start", app.startHandler)
 	log.Fatal(bot.Start())
