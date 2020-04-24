@@ -4,17 +4,18 @@ import (
 	"github.com/yanzay/tbot"
 )
 
-//Handles the "/start" command
-func (a *application) startHandler(request *tbot.Message) {
-	m := "Hello, I am your friendly EventsBot and I'll be helping you with keeping track of your " +
-		"events! What would you like to do?"
-	a.client.SendMessage(request.Chat.ID, m)
+//Handles the "/start" command and displays choices
+func (a *application) startHandler(m *tbot.Message) {
+	btns := btnStartingChoices()
+	a.client.SendMessage(m.Chat.ID, "Hello, I am your friendly Event Tracker Bot and I'll be helping you with keeping track of your "+
+		"events! What would you like to do?", tbot.OptInlineKeyboardMarkup(btns))
 }
 
-func (a *application) optionsHandler(request *tbot.Message) {
+//Handles /help command by displaying a list of Bot's functionalities
+func (a *application) helpHandler(request *tbot.Message) {
 	m := "/createEvent: creates a new event \n/showEvents: shows a current log of all events \n" +
 		"/editEvent <EventName>: allows you to edit your event \n/countdown <EventName>: shows " +
 		"how much time between now and specified event \n/options: shows all the things I can do \n" +
-		"/joke: pulls a random (not so great) joke from the internet"
+		"/deleteAll: erases all events in database"
 	a.client.SendMessage(request.Chat.ID, m)
 }

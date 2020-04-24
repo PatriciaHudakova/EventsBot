@@ -28,9 +28,9 @@ func init() {
 }
 
 func main() {
-	bot = tbot.New(token) //, tbot.WithWebhook("https://events-bot-tg.herokuapp.com/", ":"+os.Getenv("PORT"))) //an instance of correct bot is created (token being the differential)
+	bot = tbot.New(token)
 	app.client = bot.Client()
 	bot.HandleMessage("/start", app.startHandler)
-	bot.HandleMessage("/options", app.optionsHandler)
+	bot.HandleMessage("/help", app.helpHandler)
 	log.Fatal(bot.Start())
 }
