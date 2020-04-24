@@ -4,7 +4,7 @@ import (
 	"github.com/yanzay/tbot"
 )
 
-// Initial choice of buttons upon /start
+// Initial choice of buttons upon triggered /start command
 func btnStartingChoices() *tbot.InlineKeyboardMarkup {
 	btnCreate := tbot.InlineKeyboardButton{
 		Text:         "Create Event",

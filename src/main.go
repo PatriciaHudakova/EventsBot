@@ -31,6 +31,8 @@ func main() {
 	bot = tbot.New(token)
 	app.client = bot.Client()
 	bot.HandleMessage("/start", app.startHandler)
+	bot.HandleCallback(app.buttonHandler)
 	bot.HandleMessage("/help", app.helpHandler)
+	bot.HandleMessage("/createEvent", app.createEventHandler)
 	log.Fatal(bot.Start())
 }
