@@ -1,7 +1,10 @@
 package main
 
 import (
+	"database/sql"
+	_ "github.com/lib/pq"
 	"github.com/yanzay/tbot"
+	"os"
 )
 
 //Handles the "/start" command and displays message with button choices
@@ -32,7 +35,22 @@ func (a *application) helpHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, m)
 }
 
-//Handles /createEvent
+//Handles /createEvent command
 func (a *application) createEventHandler(request *tbot.Message) {
-	return //TBD
+
+}
+
+//Handler to delete all events
+func (a *application) deleteAllHandler(request *tbot.Message) {
+	pwd := os.Getenv("POSTGRES_PASSWORD")
+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+pwd+" dbname=eventsdb sslmode=disable")
+
+	_, err = db.Exec("TRUNCATE events")
+	if err != nil {
+		panic(err)
+	} else {
+		a.client.SendMessage(request.Chat.ID, "Success: All events have been deleted!")
+	}
 }

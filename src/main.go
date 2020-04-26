@@ -42,6 +42,7 @@ func main() {
 	bot.HandleCallback(app.buttonHandler)
 	bot.HandleMessage("/help", app.helpHandler)
 	bot.HandleMessage("/createEvent", app.createEventHandler)
+	bot.HandleMessage("/deleteAll", app.deleteAllHandler)
 	log.Fatal(bot.Start())
 }
 
