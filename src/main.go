@@ -8,11 +8,18 @@ import (
 	"github.com/yanzay/tbot" //Go library for Telegram Bot API
 	"log"
 	"os"
+	"time"
 )
 
 //declare a struct called application
 type application struct {
 	client *tbot.Client //(pointer) works with the actual value as opposed to a copy
+}
+
+type dbColumns struct {
+	name string
+	date time.Time
+	time time.Time
 }
 
 var (
@@ -43,6 +50,7 @@ func main() {
 	bot.HandleMessage("/help", app.helpHandler)
 	bot.HandleMessage("/createEvent", app.createEventHandler)
 	bot.HandleMessage("/deleteAll", app.deleteAllHandler)
+	bot.HandleMessage("/showEvents", app.showEventsHandler)
 	log.Fatal(bot.Start())
 }
 

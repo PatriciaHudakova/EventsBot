@@ -5,6 +5,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/yanzay/tbot"
 	"os"
+	"time"
 )
 
 //Handles the "/start" command and displays message with button choices
@@ -52,5 +53,43 @@ func (a *application) deleteAllHandler(request *tbot.Message) {
 		panic(err)
 	} else {
 		a.client.SendMessage(request.Chat.ID, "Success: All events have been deleted!")
+	}
+	defer db.Close()
+}
+
+//Shows all events listen in the table
+func (a *application) showEventsHandler(request *tbot.Message) {
+	pwd := os.Getenv("POSTGRES_PASSWORD")
+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+pwd+" dbname=eventsdb sslmode=disable")
+
+	rows, err := db.Query("SELECT * FROM events")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	//Placeholder for an array
+	entries := make([]dbColumns, 0)
+
+	//Loop through the values of rows
+	for rows.Next() {
+		column := dbColumns{}
+		err := rows.Scan(&column.name, &column.date, &column.time)
+		if err != nil {
+			panic(err)
+		}
+		entries = append(entries, column)
+	}
+
+	//Handle any errors
+	if err = rows.Err(); err != nil {
+		panic(err)
+	}
+
+	//Loop through and print all results in a separate message
+	for _, i := range entries {
+		a.client.SendMessage(request.Chat.ID, i.name+" "+i.time.Format(time.RFC1123))
 	}
 }
