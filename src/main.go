@@ -23,9 +23,12 @@ type dbColumns struct {
 }
 
 var (
-	app   application
-	bot   *tbot.Server
-	token string
+	app       application
+	bot       *tbot.Server
+	token     string
+	eventName string
+	eventDate string
+	eventTime string
 )
 
 //Initialise environment before main() launches
@@ -46,7 +49,7 @@ func main() {
 
 	//All handler-related code
 	bot.HandleMessage("/start", app.startHandler)
-	bot.HandleCallback(app.buttonHandler)
+	bot.HandleCallback(app.startButtonHandler)
 	bot.HandleMessage("/help", app.helpHandler)
 	bot.HandleMessage("/createEvent", app.createEventHandler)
 	bot.HandleMessage("/deleteAll", app.deleteAllHandler)
