@@ -23,12 +23,13 @@ type dbColumns struct {
 }
 
 var (
-	app       application
-	bot       *tbot.Server
-	token     string
-	eventName string
-	eventDate string
-	eventTime string
+	app         application
+	bot         *tbot.Server
+	token       string
+	eventName   string
+	eventDate   string
+	eventTime   string
+	eventChatId string
 )
 
 //Initialise environment before main() launches

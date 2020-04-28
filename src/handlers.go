@@ -38,7 +38,7 @@ func (a *application) deleteAllHandler(request *tbot.Message) {
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
-	_, err = db.Exec("TRUNCATE events")
+	_, err = db.Exec("DELETE FROM events WHERE chatid = '" + request.Chat.ID + "'")
 	if err != nil {
 		panic(err)
 	} else {
@@ -52,11 +52,13 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
-	rows, err := db.Query("SELECT * FROM events")
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
+
+	//check for userID and only display entries that match to a user requesting
+	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "'")
 
 	//Placeholder for an array slice
 	entries := make([]dbColumns, 0)
@@ -85,6 +87,7 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 
 //Handles /createEvent command using a chain of handlers creating a database entry based on user input
 func (a *application) newHandler(request *tbot.Message) {
+	eventChatId = request.Chat.ID
 	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?")
 	bot.HandleMessage("[a-zA-Z]", app.eventNameHandler)
 }
@@ -99,7 +102,7 @@ func (a *application) eventNameHandler(request *tbot.Message) {
 //Logs date and asks for a time input
 func (a *application) eventDateHandler(request *tbot.Message) {
 	eventDate = tbot.Message{Text: request.Text}.Text
-	a.client.SendMessage(request.Chat.ID, "Perfect, what time? Format: HH:MM")
+	a.client.SendMessage(request.Chat.ID, "Perfect, what time? 24h format: HH:MM")
 	bot.HandleMessage("^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.eventDBHandler)
 }
 
@@ -111,8 +114,8 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
-	_, err = db.Exec("INSERT INTO events(name, date, time) VALUES " +
-		"('" + eventName + "', '" + eventDate + "', '" + eventTime + "');")
+	_, err = db.Exec("INSERT INTO events(name, date, time, chatid) VALUES " +
+		"('" + eventName + "', '" + eventDate + "', '" + eventTime + "', '" + eventChatId + "');")
 	if err != nil {
 		panic(err)
 	} else {
