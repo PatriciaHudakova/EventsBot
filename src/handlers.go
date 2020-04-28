@@ -88,42 +88,41 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 	}
 }
 
-//Handles /createEvent command
+//Handles /createEvent command using a chain of handlers creating a database entry based on user input
 func (a *application) createEventHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?")
-	bot.HandleMessage(".", app.eventNameHandler)
+	bot.HandleMessage("[a-zA-Z]", app.eventNameHandler)
 }
 
+//Logs event name and asks for the Date
 func (a *application) eventNameHandler(request *tbot.Message) {
 	eventName = tbot.Message{Text: request.Text}.Text
 	a.client.SendMessage(request.Chat.ID, "Awesome, when will it happen?")
 	bot.HandleMessage("\\d{4}-\\d{2}-\\d{2}", app.eventDateHandler)
 }
 
+//Logs the date and asks for a time input
 func (a *application) eventDateHandler(request *tbot.Message) {
 	eventDate = tbot.Message{Text: request.Text}.Text
 	a.client.SendMessage(request.Chat.ID, "Perfect, what time?")
-	bot.HandleMessage("^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.eventTimeHandler)
+	bot.HandleMessage("^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.eventDBHandler)
 }
 
-func (a *application) eventTimeHandler(request *tbot.Message) {
+// Logs time input and creates a database query based on user input and executes
+func (a *application) eventDBHandler(request *tbot.Message) {
 	eventTime = tbot.Message{Text: request.Text}.Text
 	a.client.SendMessage(request.Chat.ID, "Let me make a note for you ^.^")
-	bot.HandleMessage(".", app.eventDBHandler)
-}
 
-func (a *application) eventDBHandler(request *tbot.Message) {
 	pwd := os.Getenv("POSTGRES_PASSWORD")
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+pwd+" dbname=eventsdb sslmode=disable")
 
-	_, err = db.Exec("INSERT INTO eventsdb VALUES (" + eventName + ", " + eventDate + ", " + eventTime + ")")
+	_, err = db.Exec("INSERT INTO events(name, date, time) VALUES ('" + eventName + "', '" + eventDate + "', '" + eventTime + "');")
 	if err != nil {
 		panic(err)
 	} else {
-		a.client.SendMessage(request.Chat.ID, "Success: Event Created!")
+		a.client.SendMessage(request.Chat.ID, " Great, All Done!")
 	}
-
-	a.client.SendMessage(request.Chat.ID, "Great, All Done!")
+	db.Close()
 }
