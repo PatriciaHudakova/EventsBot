@@ -68,6 +68,7 @@ func openDBConnection() {
 	}
 	defer db.Close()
 
+	//Test DB Connection
 	err = db.Ping()
 	if err != nil {
 		panic(err)

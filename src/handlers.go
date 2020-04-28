@@ -5,7 +5,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/yanzay/tbot"
 	"os"
-	"time"
 )
 
 //Handles the "/start" command and displays message with button choices
@@ -51,7 +50,7 @@ func (a *application) deleteAllHandler(request *tbot.Message) {
 	defer db.Close()
 }
 
-//Shows all events listen in the table
+//Shows all events listed in the table
 func (a *application) showEventsHandler(request *tbot.Message) {
 	pwd := os.Getenv("POSTGRES_PASSWORD")
 
@@ -84,7 +83,7 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 
 	//Loop through and print all results in a separate message
 	for _, i := range entries {
-		a.client.SendMessage(request.Chat.ID, i.name+" "+i.time.Format(time.RFC1123))
+		a.client.SendMessage(request.Chat.ID, i.name+" on "+i.time.Format("2006-01-02 at 15:04"))
 	}
 }
 
@@ -97,14 +96,14 @@ func (a *application) createEventHandler(request *tbot.Message) {
 //Logs event name and asks for the Date
 func (a *application) eventNameHandler(request *tbot.Message) {
 	eventName = tbot.Message{Text: request.Text}.Text
-	a.client.SendMessage(request.Chat.ID, "Awesome, when will it happen?")
+	a.client.SendMessage(request.Chat.ID, "Awesome, when will it happen? Format: YYYY-MM-DD")
 	bot.HandleMessage("\\d{4}-\\d{2}-\\d{2}", app.eventDateHandler)
 }
 
-//Logs the date and asks for a time input
+//Logs date and asks for a time input
 func (a *application) eventDateHandler(request *tbot.Message) {
 	eventDate = tbot.Message{Text: request.Text}.Text
-	a.client.SendMessage(request.Chat.ID, "Perfect, what time?")
+	a.client.SendMessage(request.Chat.ID, "Perfect, what time? Format: HH:MM")
 	bot.HandleMessage("^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.eventDBHandler)
 }
 
@@ -122,7 +121,7 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 	if err != nil {
 		panic(err)
 	} else {
-		a.client.SendMessage(request.Chat.ID, " Great, All Done!")
+		a.client.SendMessage(request.Chat.ID, " Great, all done! Send /showEvents to see your new event!")
 	}
 	db.Close()
 }
