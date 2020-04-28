@@ -58,7 +58,7 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 	defer db.Close()
 
 	//check for userID and only display entries that match to a user requesting
-	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "'")
+	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' ORDER BY date DESC")
 
 	//Placeholder for an array slice
 	entries := make([]dbColumns, 0)
