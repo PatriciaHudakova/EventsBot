@@ -78,7 +78,8 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 
 	//Loop through and print all results in a separate message
 	for _, i := range entries {
-		a.client.SendMessage(request.Chat.ID, i.name+" on "+i.time.Format("Mon, 02 Jan 2006 at 15:04"))
+		a.client.SendMessage(request.Chat.ID, i.name+" on "+i.date.Format("Mon, 02 Jan 2006")+" at "+
+			i.time.Format("15:04"))
 	}
 }
 
