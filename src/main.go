@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-//declare a struct called application
+//Declare a struct called application
 type application struct {
 	client *tbot.Client //(pointer) works with the actual value as opposed to a copy
 }
@@ -39,8 +39,7 @@ func init() {
 	}
 	token = os.Getenv("TELEGRAM_TOKEN")
 
-	//Call a method to create and connection to our database
-	openDBConnection()
+	checkDBConnection()
 }
 
 func main() {
@@ -51,28 +50,31 @@ func main() {
 	bot.HandleMessage("/start", app.startHandler)
 	bot.HandleCallback(app.startButtonHandler)
 	bot.HandleMessage("/help", app.helpHandler)
-	bot.HandleMessage("/createEvent", app.createEventHandler)
+	bot.HandleMessage("/new", app.newHandler)
 	bot.HandleMessage("/deleteAll", app.deleteAllHandler)
-	bot.HandleMessage("/showEvents", app.showEventsHandler)
+	bot.HandleMessage("/show", app.showEventsHandler)
 	log.Fatal(bot.Start())
 }
 
 //Opens and verifies a connection to our database, handles any errors
-func openDBConnection() {
-	pwd := os.Getenv("POSTGRES_PASSWORD")
-
+func checkDBConnection() {
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
-		"password="+pwd+" dbname=eventsdb sslmode=disable")
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
-	//Test DB Connection
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		fmt.Println("Error: Cannot connect to database")
 	}
 
 	fmt.Println("Successfully connected!")
+}
+
+//Factory function to return env var
+func getPwd() string {
+	pwd := os.Getenv("POSTGRES_PASSWORD")
+	return pwd
 }

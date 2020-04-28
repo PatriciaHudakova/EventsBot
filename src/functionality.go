@@ -8,7 +8,7 @@ import (
 func btnStartingChoices() *tbot.InlineKeyboardMarkup {
 	btnCreate := tbot.InlineKeyboardButton{
 		Text:         "Create Event",
-		CallbackData: "/createEvent",
+		CallbackData: "/new",
 	}
 
 	btnHelp := tbot.InlineKeyboardButton{

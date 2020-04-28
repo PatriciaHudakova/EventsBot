@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	_ "github.com/lib/pq"
 	"github.com/yanzay/tbot"
-	"os"
 )
 
 //Handles the "/start" command and displays message with button choices
@@ -19,8 +18,8 @@ func (a *application) startHandler(request *tbot.Message) {
 func (a *application) startButtonHandler(pressed *tbot.CallbackQuery) {
 	if pressed.Data == "/help" {
 		a.helpHandler(pressed.Message)
-	} else if pressed.Data == "/createEvent" {
-		a.createEventHandler(pressed.Message)
+	} else if pressed.Data == "/new" {
+		a.newHandler(pressed.Message)
 	} else {
 		a.client.SendMessage(pressed.Message.Chat.ID, "Error Occured. Type /help for options.")
 	}
@@ -28,18 +27,16 @@ func (a *application) startButtonHandler(pressed *tbot.CallbackQuery) {
 
 //Handles /help command by displaying a list of Bot's functionalities
 func (a *application) helpHandler(request *tbot.Message) {
-	m := "/createEvent: creates a new event \n/showEvents: shows a current log of all events \n" +
-		"/editEvent <EventName>: allows you to edit your event \n/options: shows all the things I can do \n" +
+	m := "/new: creates a new event \n/show: shows a current log of all events \n" +
+		"/editEvent <EventName>: allows you to edit your event \n/help: shows all the things I can do \n" +
 		"/deleteAll: erases all events in database"
 	a.client.SendMessage(request.Chat.ID, m)
 }
 
 //Handler to delete all events
 func (a *application) deleteAllHandler(request *tbot.Message) {
-	pwd := os.Getenv("POSTGRES_PASSWORD")
-
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
-		"password="+pwd+" dbname=eventsdb sslmode=disable")
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
 	_, err = db.Exec("TRUNCATE events")
 	if err != nil {
@@ -52,10 +49,8 @@ func (a *application) deleteAllHandler(request *tbot.Message) {
 
 //Shows all events listed in the table
 func (a *application) showEventsHandler(request *tbot.Message) {
-	pwd := os.Getenv("POSTGRES_PASSWORD")
-
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
-		"password="+pwd+" dbname=eventsdb sslmode=disable")
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
 	rows, err := db.Query("SELECT * FROM events")
 	if err != nil {
@@ -83,12 +78,12 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 
 	//Loop through and print all results in a separate message
 	for _, i := range entries {
-		a.client.SendMessage(request.Chat.ID, i.name+" on "+i.time.Format("2006-01-02 at 15:04"))
+		a.client.SendMessage(request.Chat.ID, i.name+" on "+i.time.Format("Mon, 02 Jan 2006 at 15:04"))
 	}
 }
 
 //Handles /createEvent command using a chain of handlers creating a database entry based on user input
-func (a *application) createEventHandler(request *tbot.Message) {
+func (a *application) newHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?")
 	bot.HandleMessage("[a-zA-Z]", app.eventNameHandler)
 }
@@ -112,16 +107,15 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 	eventTime = tbot.Message{Text: request.Text}.Text
 	a.client.SendMessage(request.Chat.ID, "Let me make a note for you ^.^")
 
-	pwd := os.Getenv("POSTGRES_PASSWORD")
-
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
-		"password="+pwd+" dbname=eventsdb sslmode=disable")
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
-	_, err = db.Exec("INSERT INTO events(name, date, time) VALUES ('" + eventName + "', '" + eventDate + "', '" + eventTime + "');")
+	_, err = db.Exec("INSERT INTO events(name, date, time) VALUES " +
+		"('" + eventName + "', '" + eventDate + "', '" + eventTime + "');")
 	if err != nil {
 		panic(err)
 	} else {
-		a.client.SendMessage(request.Chat.ID, " Great, all done! Send /showEvents to see your new event!")
+		a.client.SendMessage(request.Chat.ID, " Great, all done! Send /show to see your new event!")
 	}
 	db.Close()
 }
