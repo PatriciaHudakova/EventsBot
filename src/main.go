@@ -38,7 +38,7 @@ func init() {
 	if err != nil {        //if there is an error during env launch
 		log.Fatalln(err)
 	}
-	token = os.Getenv("TELEGRAM_TOKEN")
+	token = os.Getenv("TELEGRAM_BOT_TOKEN")
 
 	checkDBConnection()
 }
@@ -54,6 +54,7 @@ func main() {
 	bot.HandleMessage("/new", app.newHandler)
 	bot.HandleMessage("/deleteAll", app.deleteAllHandler)
 	bot.HandleMessage("/show", app.showEventsHandler)
+	bot.HandleMessage("/today", app.todayHandler)
 	log.Fatal(bot.Start())
 }
 

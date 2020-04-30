@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/lib/pq"
 	"github.com/yanzay/tbot"
+	"time"
 )
 
 //Handles the "/start" command and displays message with button choices
@@ -29,7 +30,7 @@ func (a *application) startButtonHandler(pressed *tbot.CallbackQuery) {
 func (a *application) helpHandler(request *tbot.Message) {
 	m := "/new: creates a new event \n/show: shows a current log of all events \n" +
 		"/editEvent <EventName>: allows you to edit your event \n/help: shows all the things I can do \n" +
-		"/deleteAll: erases all events in database"
+		"/deleteAll: erases all events in database \n/today: displays all events happening today"
 	a.client.SendMessage(request.Chat.ID, m)
 }
 
@@ -47,18 +48,55 @@ func (a *application) deleteAllHandler(request *tbot.Message) {
 	defer db.Close()
 }
 
+//Sends a reminder for events on the same day
+func (a *application) todayHandler(request *tbot.Message) {
+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+	defer db.Close()
+
+	//check for userID and only display entries that match to a user making a request
+	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' " +
+		"AND date = '" + time.Now().Format("2006-01-02") + "' ORDER BY date ASC")
+
+	entries := make([]dbColumns, 0)
+
+	//Loop through the values of rows
+	for rows.Next() {
+		column := dbColumns{}
+		err := rows.Scan(&column.name, &column.date, &column.time)
+		if err != nil {
+			panic(err)
+		}
+		entries = append(entries, column)
+	}
+
+	//Handle any errors
+	if err = rows.Err(); err != nil {
+		panic(err)
+	}
+
+	//Loop through and print all results in a separate message
+	if len(entries) == 0 {
+		a.client.SendMessage(request.Chat.ID, "You have no events for today")
+	} else {
+		a.client.SendMessage(request.Chat.ID, "You have the following events today:")
+		for _, i := range entries {
+			a.client.SendMessage(request.Chat.ID, i.name+" at "+i.time.Format("15:04"))
+		}
+	}
+}
+
 //Shows all events listed in the table
 func (a *application) showEventsHandler(request *tbot.Message) {
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
-	if err != nil {
-		panic(err)
-	}
 	defer db.Close()
 
 	//check for userID and only display entries that match to a user requesting
-	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' ORDER BY date DESC")
+	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' ORDER BY date ASC")
 
 	//Placeholder for an array slice
 	entries := make([]dbColumns, 0)
@@ -90,6 +128,7 @@ func (a *application) newHandler(request *tbot.Message) {
 	eventChatId = request.Chat.ID
 	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?")
 	bot.HandleMessage("[a-zA-Z]", app.eventNameHandler)
+
 }
 
 //Logs event name and asks for the Date
