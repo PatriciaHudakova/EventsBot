@@ -49,12 +49,13 @@ func main() {
 
 	//All handler-related code
 	bot.HandleMessage("/start", app.startHandler)
-	bot.HandleCallback(app.startButtonHandler)
+	bot.HandleCallback(app.buttonHandler)
 	bot.HandleMessage("/help", app.helpHandler)
 	bot.HandleMessage("/new", app.newHandler)
 	bot.HandleMessage("/deleteAll", app.deleteAllHandler)
 	bot.HandleMessage("/show", app.showEventsHandler)
 	bot.HandleMessage("/today", app.todayHandler)
+	bot.HandleMessage("/edit", app.editHandler)
 	log.Fatal(bot.Start())
 }
 

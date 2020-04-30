@@ -15,21 +15,27 @@ func (a *application) startHandler(request *tbot.Message) {
 		"events! What would you like to do?", tbot.OptInlineKeyboardMarkup(buttons))
 }
 
-//Handle pressed buttons created in startHandler()
-func (a *application) startButtonHandler(pressed *tbot.CallbackQuery) {
+//Handles any pressed buttons
+func (a *application) buttonHandler(pressed *tbot.CallbackQuery) {
 	if pressed.Data == "/help" {
 		a.helpHandler(pressed.Message)
 	} else if pressed.Data == "/new" {
 		a.newHandler(pressed.Message)
+	} else if pressed.Data == "/newName" {
+		a.newNameHandler(pressed.Message)
+	} else if pressed.Data == "/newDate" {
+		a.newDateHandler(pressed.Message)
+	} else if pressed.Data == "/newTime" {
+		a.newTimeHandler(pressed.Message)
 	} else {
-		a.client.SendMessage(pressed.Message.Chat.ID, "Error Occured. Type /help for options.")
+		a.client.SendMessage(pressed.Message.Chat.ID, "Error Occured")
 	}
 }
 
 //Handles /help command by displaying a list of Bot's functionalities
 func (a *application) helpHandler(request *tbot.Message) {
 	m := "/new: creates a new event \n/show: shows a current log of all events \n" +
-		"/editEvent <EventName>: allows you to edit your event \n/help: shows all the things I can do \n" +
+		"/edit <EventName>: allows you to edit your event \n/help: shows all the things I can do \n" +
 		"/deleteAll: erases all events in database \n/today: displays all events happening today"
 	a.client.SendMessage(request.Chat.ID, m)
 }
@@ -56,7 +62,7 @@ func (a *application) todayHandler(request *tbot.Message) {
 
 	defer db.Close()
 
-	//check for userID and only display entries that match to a user making a request
+	//Only returns entries where the date is today and chatid is identical to request id
 	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' " +
 		"AND date = '" + time.Now().Format("2006-01-02") + "' ORDER BY date ASC")
 
@@ -77,7 +83,7 @@ func (a *application) todayHandler(request *tbot.Message) {
 		panic(err)
 	}
 
-	//Loop through and print all results in a separate message
+	//Loop through and print all results in a separate message (if any)
 	if len(entries) == 0 {
 		a.client.SendMessage(request.Chat.ID, "You have no events for today")
 	} else {
@@ -161,4 +167,121 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 		a.client.SendMessage(request.Chat.ID, " Great, all done! Send /show to see your new event!")
 	}
 	db.Close()
+}
+
+//Handles /edit command
+func (a *application) editHandler(request *tbot.Message) {
+	a.client.SendMessage(request.Chat.ID, "Okay, what is the event called?")
+	bot.HandleMessage("[a-zA-Z]", app.editEnterNameHandler)
+}
+
+//Searched through events table to check if entry exists
+func (a *application) editEnterNameHandler(request *tbot.Message) {
+	searchEvent := tbot.Message{Text: request.Text}.Text
+
+	db, _ := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+	defer db.Close()
+
+	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' AND " +
+		"name = '" + searchEvent + "' ORDER BY date ASC")
+
+	if err != nil {
+		panic(err)
+	}
+
+	entries := make([]dbColumns, 0)
+
+	//Loop through the values of rows
+	for rows.Next() {
+		column := dbColumns{}
+		err := rows.Scan(&column.name, &column.date, &column.time)
+		if err != nil {
+			panic(err)
+		}
+		entries = append(entries, column)
+	}
+
+	//Handle any errors
+	if err = rows.Err(); err != nil {
+		panic(err)
+	}
+
+	//if there are no entries matching user input
+	if len(entries) != 1 {
+		a.client.SendMessage(request.Chat.ID, "I'm sorry, there are no events of this name. Send /show to check")
+	} else {
+		for _, i := range entries {
+			eventName = i.name
+			buttons := btnOptionsChoices()
+			a.client.SendMessage(request.Chat.ID, "Got it, what would you like to change?", tbot.OptInlineKeyboardMarkup(buttons))
+		}
+	}
+}
+
+func (a *application) newNameHandler(request *tbot.Message) {
+	a.client.SendMessage(request.Chat.ID, "Enter a new name:")
+	bot.HandleMessage("[0-9]", app.newNameDBHandler)
+}
+
+func (a *application) newNameDBHandler(request *tbot.Message) {
+	newEventName := tbot.Message{Text: request.Text}.Text
+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+	_, err = db.Exec("UPDATE events SET name='" + newEventName + "' WHERE name='" + eventName + "'")
+
+	if err != nil {
+		a.client.SendMessage(request.Chat.ID, "An error occurred, please try again.")
+	} else {
+		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
+	}
+
+	defer db.Close()
+}
+
+func (a *application) newDateHandler(request *tbot.Message) {
+	a.client.SendMessage(request.Chat.ID, "Enter a new Date (YYYY:MM:DD):")
+	bot.HandleMessage("\\d{4}-\\d{2}-\\d{2}", app.newDateDBHandler)
+}
+
+func (a *application) newDateDBHandler(request *tbot.Message) {
+	newEventDate := tbot.Message{Text: request.Text}.Text
+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+	_, err = db.Exec("UPDATE events SET date='" + newEventDate + "' WHERE name='" + eventName + "'")
+
+	if err != nil {
+		a.client.SendMessage(request.Chat.ID, "An error occurred, please try again.")
+	} else {
+		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
+	}
+
+	defer db.Close()
+}
+
+func (a *application) newTimeHandler(request *tbot.Message) {
+	a.client.SendMessage(request.Chat.ID, "Enter a new Time (YYYY:MM:DD:")
+	bot.HandleMessage("^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.newTimeDBHandler)
+}
+
+func (a *application) newTimeDBHandler(request *tbot.Message) {
+	newEventTime := tbot.Message{Text: request.Text}.Text
+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+	_, err = db.Exec("UPDATE events SET time='" + newEventTime + "' WHERE name='" + eventName + "'")
+
+	if err != nil {
+		a.client.SendMessage(request.Chat.ID, "An error occurred, please try again.")
+	} else {
+		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
+	}
+
+	defer db.Close()
 }

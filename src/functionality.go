@@ -21,3 +21,26 @@ func btnStartingChoices() *tbot.InlineKeyboardMarkup {
 		},
 	}
 }
+
+// Button options for event change /edit command
+func btnOptionsChoices() *tbot.InlineKeyboardMarkup {
+	btnChangeName := tbot.InlineKeyboardButton{
+		Text:         "Rename",
+		CallbackData: "/newName",
+	}
+
+	btnChangeDate := tbot.InlineKeyboardButton{
+		Text:         "Date",
+		CallbackData: "/newDate",
+	}
+
+	btnChangeTime := tbot.InlineKeyboardButton{
+		Text:         "Time",
+		CallbackData: "/newTime",
+	}
+	return &tbot.InlineKeyboardMarkup{
+		InlineKeyboard: [][]tbot.InlineKeyboardButton{
+			{btnChangeName, btnChangeDate, btnChangeTime},
+		},
+	}
+}
