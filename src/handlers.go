@@ -35,7 +35,7 @@ func (a *application) buttonHandler(pressed *tbot.CallbackQuery) {
 //Handles /help command by displaying a list of Bot's functionalities
 func (a *application) helpHandler(request *tbot.Message) {
 	m := "/new: creates a new event \n/show: shows a current log of all events \n" +
-		"/edit <EventName>: allows you to edit your event \n/help: shows all the things I can do \n" +
+		"/edit: allows you to edit your event \n/help: shows all the things I can do \n" +
 		"/deleteAll: erases all events in database \n/today: displays all events happening today"
 	a.client.SendMessage(request.Chat.ID, m)
 }
