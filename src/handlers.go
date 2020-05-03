@@ -102,7 +102,8 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 	defer db.Close()
 
 	//check for userID and only display entries that match to a user requesting
-	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' ORDER BY date ASC")
+	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' " +
+		"ORDER BY date ASC")
 
 	//Placeholder for an array slice
 	entries := make([]dbColumns, 0)
@@ -122,10 +123,14 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 		panic(err)
 	}
 
-	//Loop through and print all results in a separate message
-	for _, i := range entries {
-		a.client.SendMessage(request.Chat.ID, i.name+" on "+i.date.Format("Mon, 02 Jan 2006")+" at "+
-			i.time.Format("15:04"))
+	//Loop through and print all results (if any) in a separate message
+	if len(entries) == 0 {
+		a.client.SendMessage(request.Chat.ID, "You have no events scheduled, add some using /new!")
+	} else {
+		for _, i := range entries {
+			a.client.SendMessage(request.Chat.ID, i.name+" on "+i.date.Format("Mon, 02 Jan 2006")+" at "+
+				i.time.Format("15:04"))
+		}
 	}
 }
 
@@ -154,7 +159,6 @@ func (a *application) eventDateHandler(request *tbot.Message) {
 // Logs time input and creates a database query based on user input and executes
 func (a *application) eventDBHandler(request *tbot.Message) {
 	eventTime = tbot.Message{Text: request.Text}.Text
-	a.client.SendMessage(request.Chat.ID, "Let me make a note for you ^.^")
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
@@ -162,7 +166,8 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 	_, err = db.Exec("INSERT INTO events(name, date, time, chatid) VALUES " +
 		"('" + eventName + "', '" + eventDate + "', '" + eventTime + "', '" + eventChatId + "');")
 	if err != nil {
-		panic(err)
+		a.client.SendMessage(request.Chat.ID, "I'm sorry, something went wrong adding to the database. "+
+			"Please stick to valid date/ time and specified format.")
 	} else {
 		a.client.SendMessage(request.Chat.ID, " Great, all done! Send /show to see your new event!")
 	}
@@ -172,7 +177,7 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 //Handles /edit command
 func (a *application) editHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Okay, what is the event called?")
-	bot.HandleMessage("[a-zA-Z]", app.editEnterNameHandler)
+	bot.HandleMessage("[0-9]", app.editEnterNameHandler)
 }
 
 //Searched through events table to check if entry exists
@@ -222,7 +227,7 @@ func (a *application) editEnterNameHandler(request *tbot.Message) {
 
 func (a *application) newNameHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Enter a new name:")
-	bot.HandleMessage("[0-9]", app.newNameDBHandler)
+	bot.HandleMessage("[a-zA-Z]", app.newNameDBHandler)
 }
 
 func (a *application) newNameDBHandler(request *tbot.Message) {
@@ -256,7 +261,7 @@ func (a *application) newDateDBHandler(request *tbot.Message) {
 	_, err = db.Exec("UPDATE events SET date='" + newEventDate + "' WHERE name='" + eventName + "'")
 
 	if err != nil {
-		a.client.SendMessage(request.Chat.ID, "An error occurred, please try again.")
+		a.client.SendMessage(request.Chat.ID, "Please enter a valid date.")
 	} else {
 		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
 	}
@@ -278,7 +283,7 @@ func (a *application) newTimeDBHandler(request *tbot.Message) {
 	_, err = db.Exec("UPDATE events SET time='" + newEventTime + "' WHERE name='" + eventName + "'")
 
 	if err != nil {
-		a.client.SendMessage(request.Chat.ID, "An error occurred, please try again.")
+		a.client.SendMessage(request.Chat.ID, "Please enter a valid time.")
 	} else {
 		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
 	}
