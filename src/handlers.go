@@ -177,7 +177,7 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 	db.Close()
 }
 
-//Handles /edit command
+//Handles /edit command: shows all events and takes index input
 func (a *application) editHandler(request *tbot.Message) {
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")

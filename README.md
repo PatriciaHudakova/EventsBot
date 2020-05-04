@@ -7,5 +7,4 @@ A telegram bot for storing and reminding of events
 - **/edit:** allows user to edit time and date of an existing event
 - **/show:** shows all events in order of most to least recents
 - **/deleteAll:** truncates user's schedule
-- **/delete:** deletes a specific event
 - **/today:** shows any events scheduled for today
