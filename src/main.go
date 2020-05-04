@@ -40,6 +40,8 @@ var (
 	eventTime   string
 	eventChatId string
 	db          *sql.DB
+	port        = os.Getenv("PORT")
+	publicURL   = os.Getenv("PUBLIC_URL")
 )
 
 //Initialise environment before main() launches
@@ -55,7 +57,7 @@ func init() {
 
 //Main entry for the program
 func main() {
-	bot = tbot.New(token)
+	bot = tbot.New(token, tbot.WithWebhook("PUBLIC_URL", ":"+os.Getenv("PORT")))
 	app.client = bot.Client()
 
 	//All handler-related code
