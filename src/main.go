@@ -54,7 +54,7 @@ func init() {
 
 //Main entry for the program
 func main() {
-	bot = tbot.New(token, tbot.WithWebhook("PUBLIC_URL", ":"+os.Getenv("PORT")))
+	bot = tbot.New(token, tbot.WithWebhook("https://events-bot-tg.herokuapp.com/", ":"+os.Getenv("PORT")))
 	app.client = bot.Client()
 
 	//All handler-related code
