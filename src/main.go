@@ -22,6 +22,13 @@ type dbColumns struct {
 	time time.Time
 }
 
+type derivedTable struct {
+	name   string
+	date   time.Time
+	time   time.Time
+	rownum string
+}
+
 var (
 	app         application
 	bot         *tbot.Server

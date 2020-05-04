@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/yanzay/tbot"
+	"strconv"
 	"time"
 )
 
@@ -137,14 +139,15 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 //Handles /createEvent command using a chain of handlers creating a database entry based on user input
 func (a *application) newHandler(request *tbot.Message) {
 	eventChatId = request.Chat.ID
-	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?")
-	bot.HandleMessage("[a-zA-Z]", app.eventNameHandler)
+	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?: use format n<eventName>")
+	bot.HandleMessage("[n][a-zA-Z]", app.eventNameHandler)
 
 }
 
 //Logs event name and asks for the Date
 func (a *application) eventNameHandler(request *tbot.Message) {
-	eventName = tbot.Message{Text: request.Text}.Text
+	eventNameRAW := tbot.Message{Text: request.Text}.Text
+	eventName = eventNameRAW[1:]
 	a.client.SendMessage(request.Chat.ID, "Awesome, when will it happen? Format: YYYY-MM-DD")
 	bot.HandleMessage("\\d{4}-\\d{2}-\\d{2}", app.eventDateHandler)
 }
@@ -176,32 +179,80 @@ func (a *application) eventDBHandler(request *tbot.Message) {
 
 //Handles /edit command
 func (a *application) editHandler(request *tbot.Message) {
-	a.client.SendMessage(request.Chat.ID, "Okay, what is the event called?")
-	bot.HandleMessage("[0-9]", app.editEnterNameHandler)
-}
-
-//Searched through events table to check if entry exists
-func (a *application) editEnterNameHandler(request *tbot.Message) {
-	searchEvent := tbot.Message{Text: request.Text}.Text
-
-	db, _ := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
 
 	defer db.Close()
 
-	rows, err := db.Query("SELECT name, date, time FROM events WHERE chatid = '" + request.Chat.ID + "' AND " +
-		"name = '" + searchEvent + "' ORDER BY date ASC")
+	//check for userID and only display Entries that match to a user requesting, creating a new column counting rows
+	rows, err := db.Query("SELECT * FROM (SELECT name, date, time, ROW_NUMBER() OVER (ORDER BY date ASC)" +
+		" FROM events WHERE chatid = '" + request.Chat.ID + "') AS derivedTable;")
 
 	if err != nil {
 		panic(err)
 	}
 
-	entries := make([]dbColumns, 0)
+	//Placeholder for an array slice
+	Entries := make([]derivedTable, 0)
 
 	//Loop through the values of rows
 	for rows.Next() {
-		column := dbColumns{}
-		err := rows.Scan(&column.name, &column.date, &column.time)
+		column := derivedTable{}
+		err := rows.Scan(&column.name, &column.date, &column.time, &column.rownum)
+		if err != nil {
+			panic(err)
+		}
+		Entries = append(Entries, column)
+	}
+
+	//Handle any errors
+	if err = rows.Err(); err != nil {
+		panic(err)
+	}
+
+	//Loop through and print all results (if any) in a separate message
+	if len(Entries) == 0 {
+		a.client.SendMessage(request.Chat.ID, "You have no events scheduled, add some using /new!")
+	} else {
+		a.client.SendMessage(request.Chat.ID, "Enter the index of the event you wish to edit using format: e<number>")
+		for _, i := range Entries {
+			a.client.SendMessage(request.Chat.ID, i.rownum+") "+i.name+" on "+i.date.Format("Mon, 02 Jan 2006")+" at "+
+				i.time.Format("15:04"))
+		}
+		bot.HandleMessage("[e]\\d{1}", app.editEnterNameHandler)
+	}
+
+}
+
+//Searched through events table to check if entry exists
+func (a *application) editEnterNameHandler(request *tbot.Message) {
+	buttons := btnOptionsChoices()
+	searchIndexRAW := tbot.Message{Text: request.Text}.Text
+	searchIndex := searchIndexRAW[1:]
+	var searchIndexInt int
+	searchIndexInt, _ = strconv.Atoi(searchIndex)
+	postgresOffset := searchIndexInt - 1
+	var postgresOffsetSTR string
+	postgresOffsetSTR = strconv.Itoa(postgresOffset)
+
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+	//check for userID and only display Entries that match to a user requesting, creating a new column counting rows
+	rows, err := db.Query("SELECT * FROM (SELECT name, date, time, ROW_NUMBER() OVER (ORDER BY date ASC) " +
+		" FROM events WHERE chatid = '" + request.Chat.ID + "') AS derivedTable;")
+	defer db.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	//Placeholder for an array slice
+	entries := make([]derivedTable, 0)
+
+	//Loop through the values of rows
+	for rows.Next() {
+		column := derivedTable{}
+		err := rows.Scan(&column.name, &column.date, &column.time, &column.rownum)
 		if err != nil {
 			panic(err)
 		}
@@ -213,25 +264,37 @@ func (a *application) editEnterNameHandler(request *tbot.Message) {
 		panic(err)
 	}
 
-	//if there are no entries matching user input
-	if len(entries) != 1 {
-		a.client.SendMessage(request.Chat.ID, "I'm sorry, there are no events of this name. Send /show to check")
+	//Check if entry exists
+	if len(entries) == 0 || len(entries) < searchIndexInt {
+		a.client.SendMessage(request.Chat.ID, "Entry doesn't exist")
 	} else {
-		for _, i := range entries {
-			eventName = i.name
-			buttons := btnOptionsChoices()
-			a.client.SendMessage(request.Chat.ID, "Got it, what would you like to change?", tbot.OptInlineKeyboardMarkup(buttons))
+		db, _ := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+			"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+		rows2, _ := db.Query("SELECT name FROM events WHERE chatid = '" + request.Chat.ID + "' ORDER BY date " +
+			"ASC LIMIT 1 OFFSET " + postgresOffsetSTR)
+
+		defer db.Close()
+
+		for rows2.Next() {
+			err := rows2.Scan(&eventName)
+			if err != nil {
+				panic(err)
+			}
 		}
+		a.client.SendMessage(request.Chat.ID, "Got it, what would you like to edit?", tbot.OptInlineKeyboardMarkup(buttons))
 	}
+
 }
 
 func (a *application) newNameHandler(request *tbot.Message) {
-	a.client.SendMessage(request.Chat.ID, "Enter a new name:")
-	bot.HandleMessage("[a-zA-Z]", app.newNameDBHandler)
+	a.client.SendMessage(request.Chat.ID, "Enter a new name using format: e<newName>")
+	bot.HandleMessage("[e][a-zA-Z]", app.newNameDBHandler)
 }
 
 func (a *application) newNameDBHandler(request *tbot.Message) {
-	newEventName := tbot.Message{Text: request.Text}.Text
+	newEventNameRAW := tbot.Message{Text: request.Text}.Text
+	newEventName := newEventNameRAW[1:]
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
@@ -249,11 +312,12 @@ func (a *application) newNameDBHandler(request *tbot.Message) {
 
 func (a *application) newDateHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Enter a new Date (YYYY:MM:DD):")
-	bot.HandleMessage("\\d{4}-\\d{2}-\\d{2}", app.newDateDBHandler)
+	bot.HandleMessage("[e]\\d{4}-\\d{2}-\\d{2}", app.newDateDBHandler)
 }
 
 func (a *application) newDateDBHandler(request *tbot.Message) {
-	newEventDate := tbot.Message{Text: request.Text}.Text
+	newEventDateRAW := tbot.Message{Text: request.Text}.Text
+	newEventDate := newEventDateRAW[1:]
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
@@ -270,12 +334,14 @@ func (a *application) newDateDBHandler(request *tbot.Message) {
 }
 
 func (a *application) newTimeHandler(request *tbot.Message) {
-	a.client.SendMessage(request.Chat.ID, "Enter a new Time (YYYY:MM:DD:")
-	bot.HandleMessage("^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.newTimeDBHandler)
+	a.client.SendMessage(request.Chat.ID, "Enter a new time: HH:MM")
+	bot.HandleMessage("[e]([0-1]?[0-9]|2[0-3]):[0-5][0-9]", app.newTimeDBHandler)
 }
 
 func (a *application) newTimeDBHandler(request *tbot.Message) {
-	newEventTime := tbot.Message{Text: request.Text}.Text
+	newEventTimeRAW := tbot.Message{Text: request.Text}.Text
+	newEventTime := newEventTimeRAW[1:]
+	fmt.Println(newEventTime)
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
