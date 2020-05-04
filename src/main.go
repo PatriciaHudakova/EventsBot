@@ -39,9 +39,6 @@ var (
 	eventDate   string
 	eventTime   string
 	eventChatId string
-	db          *sql.DB
-	port        = os.Getenv("PORT")
-	publicURL   = os.Getenv("PUBLIC_URL")
 )
 
 //Initialise environment before main() launches
