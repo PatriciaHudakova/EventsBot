@@ -22,7 +22,7 @@ func btnStartingChoices() *tbot.InlineKeyboardMarkup {
 	}
 }
 
-// Button options for event change /edit command
+// Button options for event change in /edit command
 func btnOptionsChoices() *tbot.InlineKeyboardMarkup {
 	btnChangeName := tbot.InlineKeyboardButton{
 		Text:         "Rename",

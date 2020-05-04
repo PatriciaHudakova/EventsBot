@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/yanzay/tbot"
 	"strconv"
@@ -56,7 +55,7 @@ func (a *application) deleteAllHandler(request *tbot.Message) {
 	defer db.Close()
 }
 
-//Sends a reminder for events on the same day
+//A reminder for events on the same day
 func (a *application) todayHandler(request *tbot.Message) {
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
@@ -85,7 +84,7 @@ func (a *application) todayHandler(request *tbot.Message) {
 		panic(err)
 	}
 
-	//Loop through and print all results in a separate message (if any)
+	//Loop through entries and print all results in a separate message (if any)
 	if len(entries) == 0 {
 		a.client.SendMessage(request.Chat.ID, "You have no events for today")
 	} else {
@@ -129,6 +128,7 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 	if len(entries) == 0 {
 		a.client.SendMessage(request.Chat.ID, "You have no events scheduled, add some using /new!")
 	} else {
+		a.client.SendMessage(request.Chat.ID, "There are all your scheduled events:")
 		for _, i := range entries {
 			a.client.SendMessage(request.Chat.ID, i.name+" on "+i.date.Format("Mon, 02 Jan 2006")+" at "+
 				i.time.Format("15:04"))
@@ -136,7 +136,7 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 	}
 }
 
-//Handles /createEvent command using a chain of handlers creating a database entry based on user input
+//Handles /createEvent through a chain of handlers resulting in a database entry based on user input
 func (a *application) newHandler(request *tbot.Message) {
 	eventChatId = request.Chat.ID
 	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?: use format n<eventName>")
@@ -221,19 +221,18 @@ func (a *application) editHandler(request *tbot.Message) {
 		}
 		bot.HandleMessage("[e]\\d{1}", app.editEnterNameHandler)
 	}
-
 }
 
 //Searched through events table to check if entry exists
 func (a *application) editEnterNameHandler(request *tbot.Message) {
 	buttons := btnOptionsChoices()
-	searchIndexRAW := tbot.Message{Text: request.Text}.Text
-	searchIndex := searchIndexRAW[1:]
+	searchIndexRAW := tbot.Message{Text: request.Text}.Text //raw user input
+	searchIndex := searchIndexRAW[1:]                       //lose the first char to obtain valid input
 	var searchIndexInt int
-	searchIndexInt, _ = strconv.Atoi(searchIndex)
-	postgresOffset := searchIndexInt - 1
+	searchIndexInt, _ = strconv.Atoi(searchIndex) //convert string to int
+	postgresOffset := searchIndexInt - 1          //calculate offset to get intended event
 	var postgresOffsetSTR string
-	postgresOffsetSTR = strconv.Itoa(postgresOffset)
+	postgresOffsetSTR = strconv.Itoa(postgresOffset) //int to string convert to use in the query
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
@@ -276,6 +275,7 @@ func (a *application) editEnterNameHandler(request *tbot.Message) {
 
 		defer db.Close()
 
+		//since rownum column isn't accessible, use temporary index to obtain event name and log for future reference
 		for rows2.Next() {
 			err := rows2.Scan(&eventName)
 			if err != nil {
@@ -287,11 +287,13 @@ func (a *application) editEnterNameHandler(request *tbot.Message) {
 
 }
 
+//Handle new name input
 func (a *application) newNameHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Enter a new name using format: e<newName>")
 	bot.HandleMessage("[e][a-zA-Z]", app.newNameDBHandler)
 }
 
+//Extract valid input and parse into the query
 func (a *application) newNameDBHandler(request *tbot.Message) {
 	newEventNameRAW := tbot.Message{Text: request.Text}.Text
 	newEventName := newEventNameRAW[1:]
@@ -310,11 +312,13 @@ func (a *application) newNameDBHandler(request *tbot.Message) {
 	defer db.Close()
 }
 
+//Handle new date input
 func (a *application) newDateHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Enter a new Date (YYYY:MM:DD):")
 	bot.HandleMessage("[e]\\d{4}-\\d{2}-\\d{2}", app.newDateDBHandler)
 }
 
+//Extract valid date from raw input and insert into query
 func (a *application) newDateDBHandler(request *tbot.Message) {
 	newEventDateRAW := tbot.Message{Text: request.Text}.Text
 	newEventDate := newEventDateRAW[1:]
@@ -333,15 +337,16 @@ func (a *application) newDateDBHandler(request *tbot.Message) {
 	defer db.Close()
 }
 
+//Handle new tim input
 func (a *application) newTimeHandler(request *tbot.Message) {
 	a.client.SendMessage(request.Chat.ID, "Enter a new time: HH:MM")
-	bot.HandleMessage("[e]([0-1]?[0-9]|2[0-3]):[0-5][0-9]", app.newTimeDBHandler)
+	bot.HandleMessage("[t]([0-1]?[0-9]|2[0-3]):[0-5][0-9]", app.newTimeDBHandler)
 }
 
+//Extract valid time from raw input and insert into query
 func (a *application) newTimeDBHandler(request *tbot.Message) {
 	newEventTimeRAW := tbot.Message{Text: request.Text}.Text
 	newEventTime := newEventTimeRAW[1:]
-	fmt.Println(newEventTime)
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")

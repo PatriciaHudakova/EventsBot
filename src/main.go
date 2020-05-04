@@ -16,12 +16,14 @@ type application struct {
 	client *tbot.Client //(pointer) works with the actual value as opposed to a copy
 }
 
+//
 type dbColumns struct {
 	name string
 	date time.Time
 	time time.Time
 }
 
+//Derived Table from row_number() used for indexing in /edit and /delete
 type derivedTable struct {
 	name   string
 	date   time.Time
@@ -50,6 +52,7 @@ func init() {
 	checkDBConnection()
 }
 
+//Main entry for the program
 func main() {
 	bot = tbot.New(token)
 	app.client = bot.Client()
