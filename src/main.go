@@ -16,7 +16,7 @@ type application struct {
 	client *tbot.Client //(pointer) works with the actual value as opposed to a copy
 }
 
-//
+//Visible user columns
 type dbColumns struct {
 	name string
 	date time.Time
@@ -39,6 +39,7 @@ var (
 	eventDate   string
 	eventTime   string
 	eventChatId string
+	db          *sql.DB
 )
 
 //Initialise environment before main() launches

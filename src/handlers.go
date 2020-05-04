@@ -130,7 +130,7 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 	if len(entries) == 0 {
 		a.client.SendMessage(request.Chat.ID, "You have no events scheduled, add some using /new!")
 	} else {
-		a.client.SendMessage(request.Chat.ID, "There are all your scheduled events:")
+		a.client.SendMessage(request.Chat.ID, "These are all your scheduled events:")
 		for _, i := range entries {
 			a.client.SendMessage(request.Chat.ID, i.name+" on "+i.date.Format("Mon, 02 Jan 2006")+" at "+
 				i.time.Format("15:04"))
@@ -141,7 +141,7 @@ func (a *application) showEventsHandler(request *tbot.Message) {
 //Handles /createEvent through a chain of handlers resulting in a database entry based on user input
 func (a *application) newHandler(request *tbot.Message) {
 	eventChatId = request.Chat.ID
-	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event?: use format n<eventName>")
+	a.client.SendMessage(request.Chat.ID, "Great! What would you like to call your event? use format: n<eventName>")
 	bot.HandleMessage("[n][a-zA-Z]", app.eventNameHandler)
 
 }
@@ -150,20 +150,22 @@ func (a *application) newHandler(request *tbot.Message) {
 func (a *application) eventNameHandler(request *tbot.Message) {
 	eventNameRAW := tbot.Message{Text: request.Text}.Text
 	eventName = eventNameRAW[1:]
-	a.client.SendMessage(request.Chat.ID, "Awesome, when will it happen? Format: YYYY-MM-DD")
-	bot.HandleMessage("\\d{4}-\\d{2}-\\d{2}", app.eventDateHandler)
+	a.client.SendMessage(request.Chat.ID, "Awesome, when will it happen? Format: n<YYYY-MM-DD>")
+	bot.HandleMessage("[n]\\d{4}-\\d{2}-\\d{2}", app.eventDateHandler)
 }
 
 //Logs date and asks for a time input
 func (a *application) eventDateHandler(request *tbot.Message) {
-	eventDate = tbot.Message{Text: request.Text}.Text
-	a.client.SendMessage(request.Chat.ID, "Perfect, what time? 24h format: HH:MM")
-	bot.HandleMessage("^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.eventDBHandler)
+	eventDateRAW := tbot.Message{Text: request.Text}.Text
+	eventDate = eventDateRAW[1:]
+	a.client.SendMessage(request.Chat.ID, "Perfect, what time? 24h format: n<HH:MM>")
+	bot.HandleMessage("^[n]([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])$", app.eventDBHandler)
 }
 
 // Logs time input and creates a database query based on user input and executes
 func (a *application) eventDBHandler(request *tbot.Message) {
-	eventTime = tbot.Message{Text: request.Text}.Text
+	eventTimeRAW := tbot.Message{Text: request.Text}.Text
+	eventTime = eventTimeRAW[1:]
 
 	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
 		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
@@ -316,8 +318,8 @@ func (a *application) newNameDBHandler(request *tbot.Message) {
 
 //Handle new date input
 func (a *application) newDateHandler(request *tbot.Message) {
-	a.client.SendMessage(request.Chat.ID, "Enter a new Date (YYYY:MM:DD):")
-	bot.HandleMessage("[e]\\d{4}-\\d{2}-\\d{2}", app.newDateDBHandler)
+	a.client.SendMessage(request.Chat.ID, "Enter a new date using format: d<YYYY:MM:DD>")
+	bot.HandleMessage("[d]\\d{4}-\\d{2}-\\d{2}", app.newDateDBHandler)
 }
 
 //Extract valid date from raw input and insert into query
@@ -331,7 +333,7 @@ func (a *application) newDateDBHandler(request *tbot.Message) {
 	_, err = db.Exec("UPDATE events SET date='" + newEventDate + "' WHERE name='" + eventName + "'")
 
 	if err != nil {
-		a.client.SendMessage(request.Chat.ID, "Please enter a valid date.")
+		a.client.SendMessage(request.Chat.ID, "Date Invalid.")
 	} else {
 		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
 	}
@@ -341,7 +343,7 @@ func (a *application) newDateDBHandler(request *tbot.Message) {
 
 //Handle new tim input
 func (a *application) newTimeHandler(request *tbot.Message) {
-	a.client.SendMessage(request.Chat.ID, "Enter a new time: HH:MM")
+	a.client.SendMessage(request.Chat.ID, "Enter a new time using format: t<HH:MM>")
 	bot.HandleMessage("[t]([0-1]?[0-9]|2[0-3]):[0-5][0-9]", app.newTimeDBHandler)
 }
 
