@@ -28,6 +28,8 @@ func (a *application) buttonHandler(pressed *tbot.CallbackQuery) {
 		a.newDateHandler(pressed.Message)
 	} else if pressed.Data == "/newTime" {
 		a.newTimeHandler(pressed.Message)
+	} else if pressed.Data == "/delete" {
+		a.deleteHandler(pressed.Message)
 	} else {
 		a.client.SendMessage(pressed.Message.Chat.ID, "Error Occured")
 	}
@@ -355,6 +357,22 @@ func (a *application) newTimeDBHandler(request *tbot.Message) {
 
 	if err != nil {
 		a.client.SendMessage(request.Chat.ID, "Please enter a valid time.")
+	} else {
+		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
+	}
+
+	defer db.Close()
+}
+
+//Deletes specified event entry
+func (a *application) deleteHandler(request *tbot.Message) {
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres "+
+		"password="+getPwd()+" dbname=eventsdb sslmode=disable")
+
+	_, err = db.Exec("DELETE FROM events WHERE name = '" + eventName + "'")
+
+	if err != nil {
+		a.client.SendMessage(request.Chat.ID, "There has been an error, please try again.")
 	} else {
 		a.client.SendMessage(request.Chat.ID, "All done! Run /show to see your changes!")
 	}

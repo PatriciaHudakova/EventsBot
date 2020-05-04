@@ -38,9 +38,14 @@ func btnOptionsChoices() *tbot.InlineKeyboardMarkup {
 		Text:         "Time",
 		CallbackData: "/newTime",
 	}
+
+	btnDelete := tbot.InlineKeyboardButton{
+		Text:         "Delete",
+		CallbackData: "/delete",
+	}
 	return &tbot.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tbot.InlineKeyboardButton{
-			{btnChangeName, btnChangeDate, btnChangeTime},
+			{btnChangeName, btnChangeDate, btnChangeTime, btnDelete},
 		},
 	}
 }
