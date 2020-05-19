@@ -186,7 +186,7 @@ func (ci *copyin) isBad() bool {
 
 func (ci *copyin) isErrorSet() bool {
 	ci.Lock()
-	isSet := (ci.err != nil)
+	isSet := ci.err != nil
 	ci.Unlock()
 	return isSet
 }
